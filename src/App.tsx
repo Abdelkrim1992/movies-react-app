@@ -1,35 +1,72 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import "./App.css";
+import Header from "./components/Header";
+import TopMovies from "./components/TopMovies";
+import Search from "./components/Search";
+import { useEffect, useState } from "react";
+import { Client } from 'appwrite';
+import updateSearchCount from './appwrite';
+
+const client = new Client();
+client.setProject('67a7a203003485aedea4');
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [searchMovie, setSearchMovie] = useState("");
+  const [movies, setMovies] = useState([]);
+  const [isLoading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+
+  const API_BASE_URL = import.meta.env.VITE_MOVIES_URL;
+  const VITE_MOVIES_API_KEY = import.meta.env.VITE_MOVIES_API_KEY;
+
+  const ApiOptions = {
+    method: "GET",
+    headers: {
+      accept: "application/json",
+      Authorization: `Bearer ${VITE_MOVIES_API_KEY}`,
+    },
+  };
+
+  const fetchData = async (query = "") => {
+    setLoading(true);
+
+    try {
+      const API_MOVIES = query
+        ? `${API_BASE_URL}/search/movie?query= ${encodeURIComponent(query)}`
+        : `${API_BASE_URL}/discover/movie`;
+      const response = await fetch(API_MOVIES, ApiOptions);
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch data`);
+      }
+
+      const data = await response.json();
+      setMovies(data.results || []);
+    } catch (error) {
+      console.log("error in fetch", error);
+      setErrorMessage("error to loading data , please try again");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData(searchMovie);
+
+  }, [searchMovie]);
 
   return (
     <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
+      <div className="wrapper">
+        <Header />
+        <Search search={searchMovie} setSearch={setSearchMovie} />
+        <TopMovies
+          movies={movies}
+          isLoading={isLoading}
+          errorMessage={errorMessage}
+        />
       </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
     </>
-  )
+  );
 }
 
-export default App
+export default App;
